@@ -22,16 +22,22 @@ app.use(express.static('public'));
 
 async function initDatabase() {
   try {
-    // Создаем таблицу пользователей
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        role VARCHAR(50) DEFAULT 'user',
-        favorites INTEGER[] DEFAULT '{}'
-      );
+    // Проверяем подключение
+    await pool.query('SELECT 1');
+    console.log('✅ База данных подключена');
+    
+    // Проверяем существование таблиц
+    const tables = await pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
     `);
+    console.log('Таблицы в базе данных:', tables.rows.map(t => t.table_name));
+    
+  } catch (error) {
+    console.error('❌ Ошибка:', error.message);
+  }
+}
 
     // Создаем таблицу книг
     // Находите этот блок в функции initDatabase():
