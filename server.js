@@ -1,3 +1,100 @@
+const express = require('express');
+const cors = require('cors');
+const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
+
+// Подключение к базе данных
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// ============ ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ============
+
+async function initializeDB() {
+  try {
+    const schemaPath = path.join(__dirname, 'schema.sql');
+    
+    if (fs.existsSync(schemaPath)) {
+      const schema = fs.readFileSync(schemaPath, 'utf8');
+      await pool.query(schema);
+      console.log('✅ База данных инициализирована');
+    } else {
+      console.log('⚠️ Файл schema.sql не найден');
+    }
+  } catch (error) {
+    console.error('❌ Ошибка инициализации БД:', error);
+  }
+}
+
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+// Тест подключения к БД
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW() as now');
+    res.json({ success: true, dbTime: result.rows[0].now });
+  } catch (error) {
+    console.error('Ошибка подключения к БД:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============ АВТОРИЗАЦИЯ ============
+
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  
+  try {
+    const result = await pool.query(
+      'SELECT id, email, role, favorites FROM users WHERE email = $1 AND password = $2',
+      [email, password]
+    );
+    
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      user.favorites = user.favorites || [];
+      res.json({ success: true, user });
+    } else {
+      res.status(401).json({ success: false, message: 'Неверный email или пароль' });
+    }
+  } catch (error) {
+    console.error('Ошибка авторизации:', error);
+    res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
+// ============ МАРШРУТЫ ДЛЯ КНИГ ============
+
+app.get('/api/books', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM books');
+    const books = result.rows.map(book => ({
+      ...book,
+      rentedUntil: book.rented_until,
+      rented_until: undefined
+    }));
+    res.json(books);
+  } catch (error) {
+    console.error('Ошибка получения книг:', error);
+    res.status(500).json({ message: 'Ошибка сервера' });
+  }
+});
+
 // ============ МАРШРУТЫ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ ============
 
 app.get('/api/users', async (req, res) => {
@@ -249,4 +346,16 @@ app.delete('/api/books/:id', async (req, res) => {
     console.error('Ошибка удаления книги:', error);
     res.status(500).json({ success: false, message: 'Ошибка сервера' });
   }
+});
+
+// ============ ЗАПУСК СЕРВЕРА ============
+
+// Инициализация БД при запуске
+initializeDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`✅ Сервер запущен на порту ${PORT}`);
+    console.log('Данные для входа:');
+    console.log('Админ: admin@mail.com / password-123456');
+    console.log('Пользователь: user@mail.com / password-123456');
+  });
 });
