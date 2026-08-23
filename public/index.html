@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Книжный магазин</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Шапка -->
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">📚 Книжный магазин</div>
+                <div class="nav-links">
+                    <a href="#" id="catalogLink">Каталог</a>
+                    <a href="#" id="favoritesLink">Избранное</a>
+                    <span id="userInfo"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Выйти</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Страница входа -->
+    <div id="loginPage" class="container">
+        <div class="login-form">
+            <h2>Вход в систему</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" value="user@mail.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Пароль:</label>
+                    <input type="password" id="password" value="password-123456" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Войти</button>
+            </form>
+            <div id="loginError" class="error-message"></div>
+            <div class="login-info">
+                <p>Тестовые данные:</p>
+                <p>Админ: admin@mail.com / password-123456</p>
+                <p>Пользователь: user@mail.com / password-123456</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основное содержимое -->
+    <div id="mainApp" style="display: none;">
+        <div class="container">
+            <!-- Сортировка -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="sortCategory">Сортировать по:</label>
+                    <select id="sortCategory">
+                        <option value="default">По умолчанию</option>
+                        <option value="category">Категория</option>
+                        <option value="author">Автор</option>
+                        <option value="year-asc">Год (возр.)</option>
+                        <option value="year-desc">Год (убыв.)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Каталог книг -->
+            <div id="catalog" class="book-grid"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно аренды -->
+    <div id="rentModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeRentModal()">&times;</span>
+            <h2>Аренда книги</h2>
+            <p id="rentBookTitle"></p>
+            <div class="form-group">
+                <label>Выберите срок аренды:</label>
+                <select id="rentPeriod">
+                    <option value="2weeks">2 недели</option>
+                    <option value="1month">1 месяц</option>
+                    <option value="3months">3 месяца</option>
+                </select>
+            </div>
+            <button onclick="confirmRent()" class="btn btn-primary">Подтвердить аренду</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно покупки -->
+    <div id="buyModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeBuyModal()">&times;</span>
+            <h2>Оформление заказа</h2>
+            <p id="buyBookTitle"></p>
+            <form id="orderForm">
+                <div class="form-group">
+                    <label for="fullName">ФИО:</label>
+                    <input type="text" id="fullName" required>
+                </div>
+                <div class="form-group">
+                    <label for="address">Адрес доставки:</label>
+                    <input type="text" id="address" required>
+                </div>
+                <div class="form-group">
+                    <label for="paymentMethod">Способ оплаты:</label>
+                    <select id="paymentMethod">
+                        <option value="card">Банковская карта</option>
+                        <option value="cash">Наличные</option>
+                        <option value="online">Онлайн-платеж</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Подтвердить заказ</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

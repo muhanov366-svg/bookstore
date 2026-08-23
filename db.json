@@ -1,0 +1,103 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "admin@mail.com",
+      "password": "password-123456",
+      "role": "admin",
+      "favorites": []
+    },
+    {
+      "id": 2,
+      "email": "user@mail.com",
+      "password": "password-123456",
+      "role": "user",
+      "favorites": []
+    }
+  ],
+  "books": [
+    {
+      "id": 1,
+      "title": "Война и мир",
+      "author": "Лев Толстой",
+      "category": "Роман",
+      "year": 1869,
+      "total": 5,
+      "rented": 0,
+      "price": 500,
+      "url": "https://example.com/book1",
+      "rentedUntil": null
+    },
+    {
+      "id": 2,
+      "title": "Преступление и наказание",
+      "author": "Фёдор Достоевский",
+      "category": "Роман",
+      "year": "1866",
+      "total": "6",
+      "rented": 1,
+      "price": "450",
+      "url": "https://example.com/book2",
+      "rentedUntil": "2026-09-05T15:59:12.927Z"
+    },
+    {
+      "id": 3,
+      "title": "Мастер и Маргарита",
+      "author": "Михаил Булгаков",
+      "category": "Роман",
+      "year": 1967,
+      "total": 4,
+      "rented": 0,
+      "price": 550,
+      "url": "https://example.com/book3",
+      "rentedUntil": null
+    },
+    {
+      "id": 4,
+      "title": "1984",
+      "author": "Джордж Оруэлл",
+      "category": "Фантастика",
+      "year": 1949,
+      "total": 6,
+      "rented": 0,
+      "price": 400,
+      "url": "https://example.com/book4",
+      "rentedUntil": null
+    },
+    {
+      "id": 5,
+      "title": "Маленький принц",
+      "author": "Антуан де Сент-Экзюпери",
+      "category": "Сказка",
+      "year": 1943,
+      "total": 8,
+      "rented": 0,
+      "price": 350,
+      "url": "https://example.com/book5",
+      "rentedUntil": null
+    }
+  ],
+  "rentals": [
+    {
+      "id": 1,
+      "bookId": 2,
+      "userId": 2,
+      "rentedAt": "2026-08-22T15:59:12.927Z",
+      "returnDate": "2026-09-05T15:59:12.927Z",
+      "period": "2weeks"
+    }
+  ],
+  "orders": [
+    {
+      "id": 1,
+      "userId": 2,
+      "bookId": 2,
+      "bookTitle": "Преступление и наказание",
+      "fullName": "dvbb",
+      "address": "ds",
+      "paymentMethod": "cash",
+      "price": 450,
+      "orderedAt": "2026-08-22T15:59:05.031Z"
+    }
+  ]
+}
