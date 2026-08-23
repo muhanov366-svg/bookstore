@@ -23,13 +23,16 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+// Логирование подключения
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✓ Установлен' : '✗ НЕ УСТАНОВЛЕН');
+
 // Тест подключения к БД
 app.get('/api/test-db', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW() as now');
     res.json({ success: true, dbTime: result.rows[0].now });
   } catch (error) {
-    console.error('Ошибка подключения к БД:', error);
+    console.error('❌ Ошибка подключения к БД:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -39,11 +42,21 @@ app.get('/api/test-db', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   
+  console.log('=== ПОПЫТКА ВХОДА ===');
+  console.log('Email:', email);
+  console.log('Password:', password ? '✓' : '✗');
+  
   try {
+    // Проверяем подключение
+    const dbCheck = await pool.query('SELECT 1');
+    console.log('✅ Подключение к БД работает');
+    
     const result = await pool.query(
       'SELECT id, email, role, favorites FROM users WHERE email = $1 AND password = $2',
       [email, password]
     );
+    
+    console.log('Результат:', result.rows);
     
     if (result.rows.length > 0) {
       const user = result.rows[0];
@@ -53,13 +66,18 @@ app.post('/api/login', async (req, res) => {
       res.status(401).json({ success: false, message: 'Неверный email или пароль' });
     }
   } catch (error) {
-    console.error('Ошибка авторизации:', error);
-    res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    console.error('❌ ОШИБКА:', error);
+    console.error('Код:', error.code);
+    console.error('Сообщение:', error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Ошибка сервера',
+      error: error.message
+    });
   }
 });
 
-// ============ МАРШРУТЫ ДЛЯ КНИГ ============
-
+// Получить все книги
 app.get('/api/books', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM books');
