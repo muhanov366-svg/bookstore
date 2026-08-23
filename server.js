@@ -4,6 +4,12 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+// Проверяем наличие DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  console.error('❌ ОШИБКА: Переменная DATABASE_URL не найдена!');
+  console.error('Пожалуйста, добавьте DATABASE_URL в настройки приложения на Orenza');
+}
+
 // Подключение к базе данных
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -24,33 +30,73 @@ app.use(express.static('public'));
 
 async function initializeDB() {
   try {
+    console.log('📦 Начинаем инициализацию базы данных...');
+    
+    // Проверяем подключение к БД
+    const testResult = await pool.query('SELECT NOW() as now');
+    console.log('✅ Подключение к БД успешно:', testResult.rows[0].now);
+    
+    // Проверяем наличие schema.sql
     const schemaPath = path.join(__dirname, 'schema.sql');
+    console.log('📁 Путь к schema.sql:', schemaPath);
     
     if (fs.existsSync(schemaPath)) {
+      console.log('✅ Файл schema.sql найден');
       const schema = fs.readFileSync(schemaPath, 'utf8');
       await pool.query(schema);
-      console.log('✅ База данных инициализирована');
+      console.log('✅ База данных инициализирована успешно');
     } else {
-      console.log('⚠️ Файл schema.sql не найден');
+      console.log('⚠️ Файл schema.sql не найден, пропускаем инициализацию');
     }
+    
+    // Проверяем наличие таблиц
+    const tablesResult = await pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `);
+    console.log('📋 Таблицы в базе данных:', tablesResult.rows.map(r => r.table_name));
+    
   } catch (error) {
     console.error('❌ Ошибка инициализации БД:', error);
+    console.error('Детали ошибки:', error.message);
+    console.error('Стек ошибки:', error.stack);
   }
 }
 
+// Middleware для логирования запросов
+app.use((req, res, next) => {
+  console.log(`📝 ${req.method} ${req.url}`);
+  next();
+});
+
 // Health check
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({ 
+    status: 'ok',
+    database: process.env.DATABASE_URL ? 'configured' : 'missing',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Тест подключения к БД
 app.get('/api/test-db', async (req, res) => {
   try {
+    console.log('🔍 Тестируем подключение к БД...');
     const result = await pool.query('SELECT NOW() as now');
-    res.json({ success: true, dbTime: result.rows[0].now });
+    console.log('✅ Подключение к БД работает');
+    res.json({ 
+      success: true, 
+      dbTime: result.rows[0].now,
+      databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing'
+    });
   } catch (error) {
-    console.error('Ошибка подключения к БД:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Ошибка подключения к БД:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing'
+    });
   }
 });
 
@@ -59,22 +105,33 @@ app.get('/api/test-db', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   
+  console.log('🔐 Попытка входа:', email);
+  
   try {
     const result = await pool.query(
       'SELECT id, email, role, favorites FROM users WHERE email = $1 AND password = $2',
       [email, password]
     );
     
+    console.log('📊 Результат запроса:', result.rows.length, 'пользователей найдено');
+    
     if (result.rows.length > 0) {
       const user = result.rows[0];
       user.favorites = user.favorites || [];
+      console.log('✅ Успешный вход для:', user.email);
       res.json({ success: true, user });
     } else {
+      console.log('❌ Неверный email или пароль');
       res.status(401).json({ success: false, message: 'Неверный email или пароль' });
     }
   } catch (error) {
-    console.error('Ошибка авторизации:', error);
-    res.status(500).json({ success: false, message: 'Ошибка сервера' });
+    console.error('❌ Ошибка авторизации:', error);
+    console.error('Детали ошибки:', error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Ошибка сервера при авторизации',
+      error: error.message 
+    });
   }
 });
 
@@ -82,16 +139,21 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/books', async (req, res) => {
   try {
+    console.log('📚 Получаем список книг...');
     const result = await pool.query('SELECT * FROM books');
     const books = result.rows.map(book => ({
       ...book,
       rentedUntil: book.rented_until,
       rented_until: undefined
     }));
+    console.log(`✅ Найдено книг: ${books.length}`);
     res.json(books);
   } catch (error) {
-    console.error('Ошибка получения книг:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
+    console.error('❌ Ошибка получения книг:', error);
+    res.status(500).json({ 
+      message: 'Ошибка сервера',
+      error: error.message 
+    });
   }
 });
 
@@ -99,11 +161,16 @@ app.get('/api/books', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   try {
+    console.log('👥 Получаем список пользователей...');
     const result = await pool.query('SELECT id, email, role, favorites FROM users');
+    console.log(`✅ Найдено пользователей: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения пользователей:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
+    console.error('❌ Ошибка получения пользователей:', error);
+    res.status(500).json({ 
+      message: 'Ошибка сервера',
+      error: error.message 
+    });
   }
 });
 
@@ -158,7 +225,6 @@ app.post('/api/rent', async (req, res) => {
   const { bookId, userId, period } = req.body;
   
   try {
-    // Проверяем доступность книги
     const bookResult = await pool.query('SELECT * FROM books WHERE id = $1', [bookId]);
     const book = bookResult.rows[0];
     
@@ -171,7 +237,6 @@ app.post('/api/rent', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Книга недоступна для аренды' });
     }
     
-    // Вычисляем дату возврата
     const now = new Date();
     let returnDate = new Date();
     
@@ -183,17 +248,15 @@ app.post('/api/rent', async (req, res) => {
         returnDate.setMonth(returnDate.getMonth() + 3);
         break;
       default:
-        returnDate.setDate(returnDate.getDate() + 14); // 2 недели
+        returnDate.setDate(returnDate.getDate() + 14);
     }
     
-    // Создаем запись об аренде
     await pool.query(
       `INSERT INTO rentals (book_id, user_id, rented_at, return_date, period) 
        VALUES ($1, $2, $3, $4, $5)`,
       [bookId, userId, now, returnDate, period]
     );
     
-    // Обновляем количество арендованных книг
     await pool.query(
       'UPDATE books SET rented = rented + 1, rented_until = $2 WHERE id = $1',
       [bookId, returnDate]
@@ -354,8 +417,9 @@ app.delete('/api/books/:id', async (req, res) => {
 initializeDB().then(() => {
   app.listen(PORT, () => {
     console.log(`✅ Сервер запущен на порту ${PORT}`);
-    console.log('Данные для входа:');
-    console.log('Админ: admin@mail.com / password-123456');
-    console.log('Пользователь: user@mail.com / password-123456');
+    console.log('📍 URL приложения: http://localhost:' + PORT);
+    console.log('👤 Данные для входа:');
+    console.log('   Админ: admin@mail.com / password-123456');
+    console.log('   Пользователь: user@mail.com / password-123456');
   });
 });
