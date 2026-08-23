@@ -4,10 +4,13 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+// Загрузка переменных окружения из .env файла (если есть)
+require('dotenv').config();
+
 // Проверяем наличие DATABASE_URL
 if (!process.env.DATABASE_URL) {
   console.error('❌ ОШИБКА: Переменная DATABASE_URL не найдена!');
-  console.error('Пожалуйста, добавьте DATABASE_URL в настройки приложения на Orenza');
+  console.error('Пожалуйста, добавьте DATABASE_URL в настройки приложения');
 }
 
 // Подключение к базе данных
@@ -31,6 +34,7 @@ app.use(express.static('public'));
 async function initializeDB() {
   try {
     console.log('📦 Начинаем инициализацию базы данных...');
+    console.log('🔗 URL базы данных:', process.env.DATABASE_URL ? 'настроен' : 'отсутствует');
     
     // Проверяем подключение к БД
     const testResult = await pool.query('SELECT NOW() as now');
@@ -57,16 +61,125 @@ async function initializeDB() {
     `);
     console.log('📋 Таблицы в базе данных:', tablesResult.rows.map(r => r.table_name));
     
+    // Проверяем данные
+    const usersResult = await pool.query('SELECT COUNT(*) as count FROM users');
+    const booksResult = await pool.query('SELECT COUNT(*) as count FROM books');
+    console.log(`👤 Пользователей: ${usersResult.rows[0].count}`);
+    console.log(`📚 Книг: ${booksResult.rows[0].count}`);
+    
   } catch (error) {
     console.error('❌ Ошибка инициализации БД:', error);
     console.error('Детали ошибки:', error.message);
+    console.error('Код ошибки:', error.code);
     console.error('Стек ошибки:', error.stack);
+    
+    // Если таблицы не существуют, создаем их вручную
+    console.log('🔄 Пробуем создать таблицы вручную...');
+    try {
+      await createTables();
+      console.log('✅ Таблицы созданы вручную');
+    } catch (createError) {
+      console.error('❌ Не удалось создать таблицы:', createError);
+    }
+  }
+}
+
+// Функция для создания таблиц вручную
+async function createTables() {
+  const createUsersTable = `
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      role VARCHAR(50) DEFAULT 'user',
+      favorites JSONB DEFAULT '[]'::jsonb
+    )
+  `;
+  
+  const createBooksTable = `
+    CREATE TABLE IF NOT EXISTS books (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      author VARCHAR(255) NOT NULL,
+      category VARCHAR(100),
+      year INTEGER,
+      total INTEGER DEFAULT 0,
+      rented INTEGER DEFAULT 0,
+      price NUMERIC(10,2),
+      url TEXT,
+      rented_until TIMESTAMP
+    )
+  `;
+  
+  const createRentalsTable = `
+    CREATE TABLE IF NOT EXISTS rentals (
+      id SERIAL PRIMARY KEY,
+      book_id INTEGER REFERENCES books(id),
+      user_id INTEGER REFERENCES users(id),
+      rented_at TIMESTAMP DEFAULT NOW(),
+      return_date TIMESTAMP,
+      period VARCHAR(50)
+    )
+  `;
+  
+  const createOrdersTable = `
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      book_id INTEGER REFERENCES books(id),
+      book_title VARCHAR(255),
+      full_name VARCHAR(255),
+      address TEXT,
+      payment_method VARCHAR(100),
+      price NUMERIC(10,2),
+      ordered_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  
+  await pool.query(createUsersTable);
+  await pool.query(createBooksTable);
+  await pool.query(createRentalsTable);
+  await pool.query(createOrdersTable);
+  
+  // Вставляем начальные данные
+  await insertInitialData();
+}
+
+// Функция для вставки начальных данных
+async function insertInitialData() {
+  // Проверяем, есть ли пользователи
+  const usersResult = await pool.query('SELECT COUNT(*) as count FROM users');
+  
+  if (usersResult.rows[0].count === 0) {
+    console.log('📝 Добавляем начальных пользователей...');
+    await pool.query(`
+      INSERT INTO users (email, password, role) VALUES 
+      ('admin@mail.com', 'password-123456', 'admin'),
+      ('user@mail.com', 'password-123456', 'user')
+    `);
+    console.log('✅ Пользователи добавлены');
+  }
+  
+  // Проверяем, есть ли книги
+  const booksResult = await pool.query('SELECT COUNT(*) as count FROM books');
+  
+  if (booksResult.rows[0].count === 0) {
+    console.log('📝 Добавляем начальные книги...');
+    await pool.query(`
+      INSERT INTO books (title, author, category, year, total, rented, price, url) VALUES 
+      ('Война и мир', 'Лев Толстой', 'Роман', 1869, 5, 0, 500, 'https://example.com/book1'),
+      ('Преступление и наказание', 'Фёдор Достоевский', 'Роман', 1866, 6, 0, 450, 'https://example.com/book2'),
+      ('Мастер и Маргарита', 'Михаил Булгаков', 'Роман', 1967, 4, 0, 550, 'https://example.com/book3'),
+      ('1984', 'Джордж Оруэлл', 'Фантастика', 1949, 6, 0, 400, 'https://example.com/book4'),
+      ('Маленький принц', 'Антуан де Сент-Экзюпери', 'Сказка', 1943, 8, 0, 350, 'https://example.com/book5')
+    `);
+    console.log('✅ Книги добавлены');
   }
 }
 
 // Middleware для логирования запросов
 app.use((req, res, next) => {
-  console.log(`📝 ${req.method} ${req.url}`);
+  console.log(`📝 ${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
@@ -127,6 +240,7 @@ app.post('/api/login', async (req, res) => {
   } catch (error) {
     console.error('❌ Ошибка авторизации:', error);
     console.error('Детали ошибки:', error.message);
+    console.error('Код ошибки:', error.code);
     res.status(500).json({ 
       success: false, 
       message: 'Ошибка сервера при авторизации',
@@ -282,10 +396,17 @@ app.post('/api/favorites', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Пользователь не найден' });
     }
     
-    const favorites = user.favorites || [];
-    favorites.push(bookId);
+    // Преобразуем favorites в массив, если это JSON
+    let favorites = user.favorites || [];
+    if (typeof favorites === 'string') {
+      favorites = JSON.parse(favorites);
+    }
     
-    await pool.query('UPDATE users SET favorites = $1 WHERE id = $2', [favorites, userId]);
+    if (!favorites.includes(bookId)) {
+      favorites.push(bookId);
+    }
+    
+    await pool.query('UPDATE users SET favorites = $1 WHERE id = $2', [JSON.stringify(favorites), userId]);
     
     res.json({ success: true, message: 'Книга добавлена в избранное' });
   } catch (error) {
@@ -305,9 +426,14 @@ app.delete('/api/favorites', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Пользователь не найден' });
     }
     
-    const favorites = (user.favorites || []).filter(id => id !== bookId);
+    let favorites = user.favorites || [];
+    if (typeof favorites === 'string') {
+      favorites = JSON.parse(favorites);
+    }
     
-    await pool.query('UPDATE users SET favorites = $1 WHERE id = $2', [favorites, userId]);
+    favorites = favorites.filter(id => id !== bookId);
+    
+    await pool.query('UPDATE users SET favorites = $1 WHERE id = $2', [JSON.stringify(favorites), userId]);
     
     res.json({ success: true, message: 'Книга удалена из избранного' });
   } catch (error) {
@@ -325,7 +451,15 @@ app.get('/api/favorites/:userId', async (req, res) => {
       return res.json([]);
     }
     
-    const favorites = user.favorites;
+    let favorites = user.favorites;
+    if (typeof favorites === 'string') {
+      favorites = JSON.parse(favorites);
+    }
+    
+    if (favorites.length === 0) {
+      return res.json([]);
+    }
+    
     const booksResult = await pool.query('SELECT * FROM books WHERE id = ANY($1)', [favorites]);
     
     res.json(booksResult.rows);
@@ -421,5 +555,6 @@ initializeDB().then(() => {
     console.log('👤 Данные для входа:');
     console.log('   Админ: admin@mail.com / password-123456');
     console.log('   Пользователь: user@mail.com / password-123456');
+    console.log('🔗 База данных: PostgreSQL');
   });
 });
