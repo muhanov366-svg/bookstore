@@ -4,7 +4,7 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-// Загрузка переменных окружения из .env файла (если есть)
+// Загрузка переменных окружения из .env файла 
 require('dotenv').config();
 
 // Проверяем наличие DATABASE_URL
