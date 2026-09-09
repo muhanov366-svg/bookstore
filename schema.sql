@@ -54,10 +54,10 @@ WHERE NOT EXISTS (SELECT 1 FROM users);
 
 INSERT INTO books (title, author, category, year, total, rented, price, url) 
 SELECT * FROM (VALUES 
-    ('Война и мир', 'Лев Толстой', 'Роман', 1869, 5, 0, 500, 'https://example.com/book1'),
-    ('Преступление и наказание', 'Фёдор Достоевский', 'Роман', 1866, 6, 0, 450, 'https://example.com/book2'),
-    ('Мастер и Маргарита', 'Михаил Булгаков', 'Роман', 1967, 4, 0, 550, 'https://example.com/book3'),
-    ('1984', 'Джордж Оруэлл', 'Фантастика', 1949, 6, 0, 400, 'https://example.com/book4'),
-    ('Маленький принц', 'Антуан де Сент-Экзюпери', 'Сказка', 1943, 8, 0, 350, 'https://example.com/book5')
+    ('Война и мир', 'Лев Толстой', 'Роман', 1869, 5, 0, 500, 'https://cloud.mail.ru/public/t86j/bKfvHUCGK'),
+    ('Преступление и наказание', 'Фёдор Достоевский', 'Роман', 1866, 6, 0, 450, 'https://cloud.mail.ru/public/sGkm/qsjdTZn3i'),
+    ('Мастер и Маргарита', 'Михаил Булгаков', 'Роман', 1967, 4, 0, 550, 'https://cloud.mail.ru/public/oTpm/U6ae5HX9b'),
+    ('1984', 'Джордж Оруэлл', 'Фантастика', 1949, 6, 0, 400, 'https://cloud.mail.ru/public/rcgk/8KXtFiXBM'),
+    ('Маленький принц', 'Антуан де Сент-Экзюпери', 'Сказка', 1943, 8, 0, 350, 'https://cloud.mail.ru/public/JMPN/DyG3kKQsU')
 ) AS v(title, author, category, year, total, rented, price, url)
 WHERE NOT EXISTS (SELECT 1 FROM books);
