@@ -27,7 +27,6 @@
             
             <!-- Вкладка "Книги" -->
             <div id="booksSection">
-                <!-- Форма добавления книги -->
                 <div class="admin-form">
                     <h2>Добавить новую книгу</h2>
                     <form id="addBookForm">
@@ -69,7 +68,141 @@
                     </form>
                 </div>
 
-                <!-- Список книг для администрирования -->
+                <div class="admin-books">
+                    <h2>Список книг</h2>
+                    <div id="adminBookList"></div>
+                </div>
+            </div>
+
+            <!-- Вкладка "Пользователи" -->
+            <div id="usersSection" style="display: none;">
+                <div class="admin-users">
+                    <h2>Список пользователей и их арендованные книги</h2>
+                    <div id="usersList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования книги -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Редактировать книгу</h2>
+            <form id="editBookForm">
+                <input type="hidden" id="editBookId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editTitle">Название:</label>
+                        <input type="text" id="editTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAuthor">Автор:</label>
+                        <input type="text" id="editAuthor" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editCategory">Категория:</label>
+                        <input type="text" id="editCategory" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editYear">Год:</label>
+                        <input type="number" id="editYear" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editTotal">Количество:</label>
+                        <input type="number" id="editTotal" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPrice">Цена:</label>
+                        <input type="number" id="editPrice" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editUrl">Ссылка на книгу:</label>
+                    <input type="url" id="editUrl" placeholder="https://example.com/book">
+                </div>
+                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ панель - Книжный магазин</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">📚 Админ панель</div>
+                <div class="nav-links">
+                    <a href="#" id="booksTab">Книги</a>
+                    <a href="#" id="usersTab">Пользователи</a>
+                    <span id="adminInfo"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Выйти</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="admin-panel">
+            <h1>Управление книжным магазином</h1>
+            
+            <!-- Вкладка "Книги" -->
+            <div id="booksSection">
+                <div class="admin-form">
+                    <h2>Добавить новую книгу</h2>
+                    <form id="addBookForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="title">Название:</label>
+                                <input type="text" id="title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="author">Автор:</label>
+                                <input type="text" id="author" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="category">Категория:</label>
+                                <input type="text" id="category" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="year">Год:</label>
+                                <input type="number" id="year" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="total">Количество:</label>
+                                <input type="number" id="total" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="price">Цена:</label>
+                                <input type="number" id="price" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="url">Ссылка на книгу:</label>
+                            <input type="url" id="url" placeholder="https://example.com/book">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Добавить книгу</button>
+                    </form>
+                </div>
+
                 <div class="admin-books">
                     <h2>Список книг</h2>
                     <div id="adminBookList"></div>
