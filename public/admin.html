@@ -14,6 +14,7 @@
                 <div class="nav-links">
                     <a href="#" id="booksTab">Книги</a>
                     <a href="#" id="usersTab">Пользователи</a>
+                    <a href="#" id="ordersTab">Заказы</a>
                     <span id="adminInfo"></span>
                     <button id="logoutBtn" class="btn btn-secondary">Выйти</button>
                 </div>
@@ -79,6 +80,15 @@
                 <div class="admin-users">
                     <h2>Список пользователей и их арендованные книги</h2>
                     <div id="usersList"></div>
+                </div>
+            </div>
+
+            <!-- ✅ Вкладка "Заказы" -->
+            <div id="ordersSection" style="display: none;">
+                <div class="admin-orders">
+                    <h2>Список заказов</h2>
+                    <div id="ordersStats" style="margin-bottom: 15px; color: #7f8c8d;"></div>
+                    <div id="ordersList"></div>
                 </div>
             </div>
         </div>
