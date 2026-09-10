@@ -442,3 +442,28 @@ nav {
     from { opacity: 0; transform: translateY(-20px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+/* Стили для заказов в админке */
+.admin-orders {
+    padding: 10px 0;
+}
+
+#ordersStats {
+    font-size: 14px;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #3498db;
+}
+
+/* Улучшение вида карточек в мобильной версии */
+@media (max-width: 768px) {
+    .admin-book-item {
+        grid-template-columns: 1fr;
+    }
+    .admin-book-item .actions {
+        width: 100%;
+    }
+    .admin-book-item .actions .btn {
+        flex: 1;
+    }
+}
