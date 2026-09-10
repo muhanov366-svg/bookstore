@@ -44,6 +44,16 @@ CREATE TABLE IF NOT EXISTS orders (
     ordered_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Создание таблицы напоминаний
+CREATE TABLE IF NOT EXISTS reminders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    book_title VARCHAR(255),
+    days_left INTEGER,
+    message TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Вставка начальных данных (только если пусто)
 INSERT INTO users (email, password, role) 
 SELECT * FROM (VALUES 
