@@ -36,11 +36,9 @@ async function initializeDB() {
     console.log('📦 Начинаем инициализацию базы данных...');
     console.log('🔗 URL базы данных:', process.env.DATABASE_URL ? 'настроен' : 'отсутствует');
     
-    // Проверяем подключение к БД
     const testResult = await pool.query('SELECT NOW() as now');
     console.log('✅ Подключение к БД успешно:', testResult.rows[0].now);
     
-    // Проверяем наличие schema.sql
     const schemaPath = path.join(__dirname, 'schema.sql');
     console.log('📁 Путь к schema.sql:', schemaPath);
     
@@ -53,7 +51,6 @@ async function initializeDB() {
       console.log('⚠️ Файл schema.sql не найден, пропускаем инициализацию');
     }
     
-    // Проверяем наличие таблиц
     const tablesResult = await pool.query(`
       SELECT table_name 
       FROM information_schema.tables 
@@ -61,7 +58,6 @@ async function initializeDB() {
     `);
     console.log('📋 Таблицы в базе данных:', tablesResult.rows.map(r => r.table_name));
     
-    // Проверяем данные
     const usersResult = await pool.query('SELECT COUNT(*) as count FROM users');
     const booksResult = await pool.query('SELECT COUNT(*) as count FROM books');
     console.log(`👤 Пользователей: ${usersResult.rows[0].count}`);
@@ -71,9 +67,7 @@ async function initializeDB() {
     console.error('❌ Ошибка инициализации БД:', error);
     console.error('Детали ошибки:', error.message);
     console.error('Код ошибки:', error.code);
-    console.error('Стек ошибки:', error.stack);
     
-    // Если таблицы не существуют, создаем их вручную
     console.log('🔄 Пробуем создать таблицы вручную...');
     try {
       await createTables();
@@ -84,7 +78,6 @@ async function initializeDB() {
   }
 }
 
-// Функция для создания таблиц вручную
 async function createTables() {
   const createUsersTable = `
     CREATE TABLE IF NOT EXISTS users (
@@ -135,19 +128,28 @@ async function createTables() {
       ordered_at TIMESTAMP DEFAULT NOW()
     )
   `;
+
+  const createRemindersTable = `
+    CREATE TABLE IF NOT EXISTS reminders (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      book_title VARCHAR(255),
+      days_left INTEGER,
+      message TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
   
   await pool.query(createUsersTable);
   await pool.query(createBooksTable);
   await pool.query(createRentalsTable);
   await pool.query(createOrdersTable);
+  await pool.query(createRemindersTable);
   
-  // Вставляем начальные данные
   await insertInitialData();
 }
 
-// Функция для вставки начальных данных
 async function insertInitialData() {
-  // Проверяем, есть ли пользователи
   const usersResult = await pool.query('SELECT COUNT(*) as count FROM users');
   
   if (usersResult.rows[0].count === 0) {
@@ -160,7 +162,6 @@ async function insertInitialData() {
     console.log('✅ Пользователи добавлены');
   }
   
-  // Проверяем, есть ли книги
   const booksResult = await pool.query('SELECT COUNT(*) as count FROM books');
   
   if (booksResult.rows[0].count === 0) {
@@ -192,19 +193,15 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Тест подключения к БД
 app.get('/api/test-db', async (req, res) => {
   try {
-    console.log('🔍 Тестируем подключение к БД...');
     const result = await pool.query('SELECT NOW() as now');
-    console.log('✅ Подключение к БД работает');
     res.json({ 
       success: true, 
       dbTime: result.rows[0].now,
       databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing'
     });
   } catch (error) {
-    console.error('❌ Ошибка подключения к БД:', error);
     res.status(500).json({ 
       success: false, 
       error: error.message,
@@ -217,7 +214,6 @@ app.get('/api/test-db', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
-  
   console.log('🔐 Попытка входа:', email);
   
   try {
@@ -225,8 +221,6 @@ app.post('/api/login', async (req, res) => {
       'SELECT id, email, role, favorites FROM users WHERE email = $1 AND password = $2',
       [email, password]
     );
-    
-    console.log('📊 Результат запроса:', result.rows.length, 'пользователей найдено');
     
     if (result.rows.length > 0) {
       const user = result.rows[0];
@@ -239,8 +233,6 @@ app.post('/api/login', async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Ошибка авторизации:', error);
-    console.error('Детали ошибки:', error.message);
-    console.error('Код ошибки:', error.code);
     res.status(500).json({ 
       success: false, 
       message: 'Ошибка сервера при авторизации',
@@ -253,21 +245,16 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/books', async (req, res) => {
   try {
-    console.log('📚 Получаем список книг...');
     const result = await pool.query('SELECT * FROM books');
     const books = result.rows.map(book => ({
       ...book,
       rentedUntil: book.rented_until,
       rented_until: undefined
     }));
-    console.log(`✅ Найдено книг: ${books.length}`);
     res.json(books);
   } catch (error) {
     console.error('❌ Ошибка получения книг:', error);
-    res.status(500).json({ 
-      message: 'Ошибка сервера',
-      error: error.message 
-    });
+    res.status(500).json({ message: 'Ошибка сервера', error: error.message });
   }
 });
 
@@ -275,16 +262,11 @@ app.get('/api/books', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   try {
-    console.log('👥 Получаем список пользователей...');
     const result = await pool.query('SELECT id, email, role, favorites FROM users');
-    console.log(`✅ Найдено пользователей: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Ошибка получения пользователей:', error);
-    res.status(500).json({ 
-      message: 'Ошибка сервера',
-      error: error.message 
-    });
+    res.status(500).json({ message: 'Ошибка сервера', error: error.message });
   }
 });
 
@@ -332,6 +314,65 @@ app.get('/api/rentals', async (req, res) => {
   } catch (error) {
     console.error('Ошибка получения аренд:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
+  }
+});
+
+// ============ НАПОМИНАНИЯ ОБ ОКОНЧАНИИ АРЕНДЫ ============
+
+// Получить аренды пользователя, которые скоро истекают или просрочены
+// ?days=3 — за сколько дней предупреждать (по умолчанию 3)
+app.get('/api/rentals/expiring/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const days = parseInt(req.query.days) || 3;
+
+  try {
+    const result = await pool.query(
+      `SELECT r.id, r.book_id, r.user_id, r.rented_at, r.return_date, r.period,
+              b.title AS book_title, b.author AS book_author
+       FROM rentals r
+       LEFT JOIN books b ON r.book_id = b.id
+       WHERE r.user_id = $1
+         AND r.return_date <= NOW() + make_interval(days => $2::int)
+       ORDER BY r.return_date ASC`,
+      [userId, days]
+    );
+
+    const now = new Date();
+    const rentals = result.rows.map(r => {
+      const returnDate = new Date(r.return_date);
+      const diffMs = returnDate - now;
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      return {
+        ...r,
+        daysLeft: diffDays,
+        isOverdue: diffDays < 0
+      };
+    });
+
+    res.json({ success: true, rentals });
+  } catch (error) {
+    console.error('Ошибка получения напоминаний:', error);
+    res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
+// Логирование ручных напоминаний от админа
+app.post('/api/reminders', async (req, res) => {
+  const { userId, bookTitle, daysLeft, message } = req.body;
+  console.log(`📨 [REMINDER] user=${userId}, book="${bookTitle}", daysLeft=${daysLeft}`);
+  console.log(`   ${message}`);
+
+  try {
+    await pool.query(
+      `INSERT INTO reminders (user_id, book_title, days_left, message) 
+       VALUES ($1, $2, $3, $4)`,
+      [userId, bookTitle, daysLeft, message]
+    );
+    res.json({ success: true, message: 'Напоминание зафиксировано' });
+  } catch (error) {
+    // Если таблицы reminders нет — просто возвращаем успех (лог уже сделан)
+    console.error('Ошибка сохранения напоминания:', error);
+    res.json({ success: true, message: 'Напоминание зафиксировано (без БД)' });
   }
 });
 
@@ -396,7 +437,6 @@ app.post('/api/favorites', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Пользователь не найден' });
     }
     
-    // Преобразуем favorites в массив, если это JSON
     let favorites = user.favorites || [];
     if (typeof favorites === 'string') {
       favorites = JSON.parse(favorites);
@@ -547,7 +587,6 @@ app.delete('/api/books/:id', async (req, res) => {
 
 // ============ ЗАПУСК СЕРВЕРА ============
 
-// Инициализация БД при запуске
 initializeDB().then(() => {
   app.listen(PORT, () => {
     console.log(`✅ Сервер запущен на порту ${PORT}`);
