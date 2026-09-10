@@ -10,25 +10,25 @@ let allOrders = [];
 document.addEventListener('DOMContentLoaded', function() {
     currentUser = checkAuth();
     if (!currentUser) return;
-    
+
     if (currentUser.role !== 'admin') {
         window.location.href = 'index.html';
         return;
     }
-    
+
     document.getElementById('adminInfo').textContent = `👑 ${currentUser.email}`;
-    
+
     loadBooks();
-    
+
     document.getElementById('addBookForm').addEventListener('submit', addBook);
     document.getElementById('editBookForm').addEventListener('submit', updateBook);
-    
+
     document.getElementById('booksTab').addEventListener('click', function(e) {
         e.preventDefault();
         showSection('booksSection');
         loadBooks();
     });
-    
+
     document.getElementById('usersTab').addEventListener('click', function(e) {
         e.preventDefault();
         showSection('usersSection');
@@ -47,19 +47,19 @@ document.addEventListener('DOMContentLoaded', function() {
 function showSection(sectionId) {
     document.getElementById('booksSection').style.display = 'none';
     document.getElementById('usersSection').style.display = 'none';
-    document.getElementById('ordersSection').style.display = 'none';  // ✅
+    document.getElementById('ordersSection').style.display = 'none';
 
     document.getElementById(sectionId).style.display = 'block';
-    
+
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.style.backgroundColor = 'transparent';
         link.style.color = 'white';
     });
-    
+
     const tabMap = {
         booksSection: 'booksTab',
         usersSection: 'usersTab',
-        ordersSection: 'ordersTab'  // ✅
+        ordersSection: 'ordersTab'
     };
     const tab = document.getElementById(tabMap[sectionId]);
     if (tab) {
@@ -86,17 +86,17 @@ async function loadBooks() {
 function displayAdminBooks(books) {
     const list = document.getElementById('adminBookList');
     list.innerHTML = '';
-    
+
     if (books.length === 0) {
         list.innerHTML = '<p>Книги не найдены</p>';
         return;
     }
-    
+
     books.forEach(book => {
         const available = book.total - book.rented;
         const isAvailable = available > 0;
         const isRented = book.rented > 0;
-        
+
         let statusText = 'В наличии ✅';
         if (!isAvailable) {
             statusText = 'Нет в наличии ❌';
@@ -107,7 +107,7 @@ function displayAdminBooks(books) {
                 statusText += ` до ${date.toLocaleDateString()}`;
             }
         }
-        
+
         const item = document.createElement('div');
         item.className = 'admin-book-item';
         item.innerHTML = `
@@ -126,7 +126,7 @@ function displayAdminBooks(books) {
                 <button class="btn btn-danger" onclick="deleteBook(${book.id})">🗑️ Удалить</button>
             </div>
         `;
-        
+
         list.appendChild(item);
     });
 }
@@ -136,17 +136,17 @@ async function loadUsersAndRentals() {
     try {
         const usersResponse = await fetch('/api/users');
         allUsers = await usersResponse.json();
-        
+
         const rentalsResponse = await fetch('/api/rentals');
         allRentals = await rentalsResponse.json();
-        
+
         const booksResponse = await fetch('/api/books');
         const books = await booksResponse.json();
         const booksMap = {};
         books.forEach(book => {
             booksMap[book.id] = book;
         });
-        
+
         displayUsersWithRentals(allUsers, allRentals, booksMap);
     } catch (error) {
         console.error('Ошибка загрузки пользователей:', error);
@@ -158,15 +158,15 @@ async function loadUsersAndRentals() {
 function displayUsersWithRentals(users, rentals, booksMap) {
     const list = document.getElementById('usersList');
     list.innerHTML = '';
-    
+
     if (users.length === 0) {
         list.innerHTML = '<p>Пользователи не найдены</p>';
         return;
     }
-    
+
     users.forEach(user => {
         const userRentals = rentals.filter(r => r.user_id === user.id);
-        
+
         const userCard = document.createElement('div');
         userCard.className = 'user-card';
         userCard.style.cssText = `
@@ -177,7 +177,7 @@ function displayUsersWithRentals(users, rentals, booksMap) {
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             border-left: 4px solid ${user.role === 'admin' ? '#e74c3c' : '#3498db'};
         `;
-        
+
         let rentalsHtml = '';
         if (userRentals.length === 0) {
             rentalsHtml = '<p style="color: #95a5a6; margin: 10px 0;">Нет арендованных книг</p>';
@@ -225,7 +225,7 @@ function displayUsersWithRentals(users, rentals, booksMap) {
             });
             rentalsHtml += '</div>';
         }
-        
+
         userCard.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                 <div>
@@ -259,7 +259,7 @@ function displayUsersWithRentals(users, rentals, booksMap) {
             </div>
             ${rentalsHtml}
         `;
-        
+
         list.appendChild(userCard);
     });
 }
@@ -269,13 +269,13 @@ async function viewUserDetails(userId) {
     try {
         const response = await fetch(`/api/users/${userId}/details`);
         if (!response.ok) throw new Error('Ошибка загрузки данных');
-        
+
         const data = await response.json();
-        
+
         let message = `👤 Пользователь: ${data.user.email}\n`;
         message += `Роль: ${data.user.role === 'admin' ? 'Администратор' : 'Пользователь'}\n`;
         message += `Избранное: ${data.user.favorites ? data.user.favorites.length : 0} книг\n\n`;
-        
+
         if (data.rentals && data.rentals.length > 0) {
             message += '📚 История аренд:\n';
             data.rentals.forEach((rental, index) => {
@@ -302,7 +302,7 @@ async function viewUserDetails(userId) {
         } else {
             message += '\nЗаказов нет.\n';
         }
-        
+
         alert(message);
     } catch (error) {
         console.error('Ошибка:', error);
@@ -399,7 +399,7 @@ function viewOrderDetails(orderId) {
 // Добавление книги
 async function addBook(e) {
     e.preventDefault();
-    
+
     const title = document.getElementById('title').value;
     const author = document.getElementById('author').value;
     const category = document.getElementById('category').value;
@@ -407,16 +407,16 @@ async function addBook(e) {
     const total = document.getElementById('total').value;
     const price = document.getElementById('price').value;
     const url = document.getElementById('url').value;
-    
+
     try {
         const response = await fetch('/api/books', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, author, category, year, total, price, url })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             alert('Книга успешно добавлена!');
             document.getElementById('addBookForm').reset();
@@ -433,7 +433,7 @@ async function addBook(e) {
 function openEditModal(bookId) {
     const book = allBooks.find(b => b.id === bookId);
     if (!book) return;
-    
+
     document.getElementById('editBookId').value = book.id;
     document.getElementById('editTitle').value = book.title;
     document.getElementById('editAuthor').value = book.author;
@@ -442,7 +442,7 @@ function openEditModal(bookId) {
     document.getElementById('editTotal').value = book.total;
     document.getElementById('editPrice').value = book.price;
     document.getElementById('editUrl').value = book.url || '';
-    
+
     document.getElementById('editModal').style.display = 'flex';
 }
 
@@ -453,7 +453,7 @@ function closeEditModal() {
 
 async function updateBook(e) {
     e.preventDefault();
-    
+
     const id = parseInt(document.getElementById('editBookId').value);
     const title = document.getElementById('editTitle').value;
     const author = document.getElementById('editAuthor').value;
@@ -462,16 +462,16 @@ async function updateBook(e) {
     const total = document.getElementById('editTotal').value;
     const price = document.getElementById('editPrice').value;
     const url = document.getElementById('editUrl').value;
-    
+
     try {
         const response = await fetch(`/api/books/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, author, category, year, total, price, url })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             alert('Книга успешно обновлена!');
             closeEditModal();
@@ -487,14 +487,14 @@ async function updateBook(e) {
 // Удаление книги
 async function deleteBook(bookId) {
     if (!confirm('Вы уверены, что хотите удалить эту книгу?')) return;
-    
+
     try {
         const response = await fetch(`/api/books/${bookId}`, {
             method: 'DELETE'
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             alert('Книга удалена!');
             loadBooks();
