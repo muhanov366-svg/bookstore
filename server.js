@@ -284,6 +284,7 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
+// Детали пользователя: аренды + заказы
 app.get('/api/users/:id/details', async (req, res) => {
   try {
     const userResult = await pool.query('SELECT id, email, role, favorites FROM users WHERE id = $1', [req.params.id]);
@@ -291,13 +292,21 @@ app.get('/api/users/:id/details', async (req, res) => {
       `SELECT r.*, b.title as book_title 
        FROM rentals r 
        LEFT JOIN books b ON r.book_id = b.id 
-       WHERE r.user_id = $1`,
+       WHERE r.user_id = $1
+       ORDER BY r.return_date DESC`,
+      [req.params.id]
+    );
+    const ordersResult = await pool.query(
+      `SELECT * FROM orders 
+       WHERE user_id = $1 
+       ORDER BY ordered_at DESC`,
       [req.params.id]
     );
     
     res.json({
       user: userResult.rows[0],
-      rentals: rentalsResult.rows
+      rentals: rentalsResult.rows,
+      orders: ordersResult.rows
     });
   } catch (error) {
     console.error('Ошибка получения деталей пользователя:', error);
@@ -319,8 +328,6 @@ app.get('/api/rentals', async (req, res) => {
 
 // ============ НАПОМИНАНИЯ ОБ ОКОНЧАНИИ АРЕНДЫ ============
 
-// Получить аренды пользователя, которые скоро истекают или просрочены
-// ?days=3 — за сколько дней предупреждать (по умолчанию 3)
 app.get('/api/rentals/expiring/:userId', async (req, res) => {
   const { userId } = req.params;
   const days = parseInt(req.query.days) || 3;
@@ -356,7 +363,6 @@ app.get('/api/rentals/expiring/:userId', async (req, res) => {
   }
 });
 
-// Логирование ручных напоминаний от админа
 app.post('/api/reminders', async (req, res) => {
   const { userId, bookTitle, daysLeft, message } = req.body;
   console.log(`📨 [REMINDER] user=${userId}, book="${bookTitle}", daysLeft=${daysLeft}`);
@@ -370,7 +376,6 @@ app.post('/api/reminders', async (req, res) => {
     );
     res.json({ success: true, message: 'Напоминание зафиксировано' });
   } catch (error) {
-    // Если таблицы reminders нет — просто возвращаем успех (лог уже сделан)
     console.error('Ошибка сохранения напоминания:', error);
     res.json({ success: true, message: 'Напоминание зафиксировано (без БД)' });
   }
@@ -511,6 +516,7 @@ app.get('/api/favorites/:userId', async (req, res) => {
 
 // ============ МАРШРУТЫ ДЛЯ ЗАКАЗОВ ============
 
+// Создание заказа
 app.post('/api/orders', async (req, res) => {
   const { userId, bookId, fullName, address, paymentMethod } = req.body;
   
@@ -532,6 +538,38 @@ app.post('/api/orders', async (req, res) => {
   } catch (error) {
     console.error('Ошибка оформления заказа:', error);
     res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
+// ✅ НОВОЕ: список всех заказов (для админа)
+app.get('/api/orders', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT o.*, u.email AS user_email
+       FROM orders o
+       LEFT JOIN users u ON o.user_id = u.id
+       ORDER BY o.ordered_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения заказов:', error);
+    res.status(500).json({ message: 'Ошибка сервера', error: error.message });
+  }
+});
+
+// ✅ НОВОЕ: заказы конкретного пользователя
+app.get('/api/orders/user/:userId', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM orders 
+       WHERE user_id = $1 
+       ORDER BY ordered_at DESC`,
+      [req.params.userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения заказов пользователя:', error);
+    res.status(500).json({ message: 'Ошибка сервера', error: error.message });
   }
 });
 
