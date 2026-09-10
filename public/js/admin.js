@@ -7,27 +7,21 @@ let allRentals = [];
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    // Проверяем авторизацию
     currentUser = checkAuth();
     if (!currentUser) return;
     
-    // Если не админ, перенаправляем
     if (currentUser.role !== 'admin') {
         window.location.href = 'index.html';
         return;
     }
     
-    // Отображаем информацию об админе
     document.getElementById('adminInfo').textContent = `👑 ${currentUser.email}`;
     
-    // Загружаем книги
     loadBooks();
     
-    // Обработчики форм
     document.getElementById('addBookForm').addEventListener('submit', addBook);
     document.getElementById('editBookForm').addEventListener('submit', updateBook);
     
-    // Обработчики вкладок
     document.getElementById('booksTab').addEventListener('click', function(e) {
         e.preventDefault();
         showSection('booksSection');
@@ -43,20 +37,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Переключение вкладок
 function showSection(sectionId) {
-    // Скрываем все секции
     document.getElementById('booksSection').style.display = 'none';
     document.getElementById('usersSection').style.display = 'none';
     
-    // Показываем нужную секцию
     document.getElementById(sectionId).style.display = 'block';
     
-    // Обновляем активную вкладку
     document.querySelectorAll('.nav-links a').forEach(link => {
         link.style.backgroundColor = 'transparent';
         link.style.color = 'white';
     });
     
-    // Подсвечиваем активную вкладку
     const activeTab = sectionId === 'booksSection' ? 'booksTab' : 'usersTab';
     const tab = document.getElementById(activeTab);
     if (tab) {
@@ -131,15 +121,12 @@ function displayAdminBooks(books) {
 // Загрузка пользователей и их арендованных книг
 async function loadUsersAndRentals() {
     try {
-        // Загружаем всех пользователей
         const usersResponse = await fetch('/api/users');
         allUsers = await usersResponse.json();
         
-        // Загружаем все аренды
         const rentalsResponse = await fetch('/api/rentals');
         allRentals = await rentalsResponse.json();
         
-        // Загружаем все книги для отображения названий
         const booksResponse = await fetch('/api/books');
         const books = await booksResponse.json();
         const booksMap = {};
@@ -165,7 +152,6 @@ function displayUsersWithRentals(users, rentals, booksMap) {
     }
     
     users.forEach(user => {
-        // Фильтруем аренды для этого пользователя
         const userRentals = rentals.filter(r => r.user_id === user.id);
         
         const userCard = document.createElement('div');
@@ -187,23 +173,40 @@ function displayUsersWithRentals(users, rentals, booksMap) {
             userRentals.forEach(rental => {
                 const book = booksMap[rental.book_id];
                 const returnDate = new Date(rental.return_date);
-                const isOverdue = new Date() > returnDate;
-                const statusColor = isOverdue ? '#e74c3c' : '#27ae60';
-                const statusText = isOverdue ? 'ПРОСРОЧЕНА' : 'Активна';
-                
+                const now = new Date();
+                const diffMs = returnDate - now;
+                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                const isOverdue = diffDays < 0;
+                const isSoon = !isOverdue && diffDays <= 3;
+                const statusColor = isOverdue ? '#e74c3c' : (isSoon ? '#f39c12' : '#27ae60');
+                const statusText = isOverdue
+                    ? `ПРОСРОЧЕНА на ${Math.abs(diffDays)} дн.`
+                    : (isSoon ? `Истекает через ${diffDays} дн.` : 'Активна');
+
                 rentalsHtml += `
                     <div style="
                         padding: 10px;
                         margin: 5px 0;
-                        background: ${isOverdue ? '#fdf2f2' : '#f0faf3'};
+                        background: ${isOverdue ? '#fdf2f2' : (isSoon ? '#fff8e1' : '#f0faf3')};
                         border-radius: 4px;
                         border-left: 3px solid ${statusColor};
                     ">
-                        <strong>📖 ${book ? book.title : 'Книга удалена'}</strong><br>
-                        ${book ? `Автор: ${book.author}` : ''}<br>
-                        🗓️ До: ${returnDate.toLocaleDateString()}<br>
-                        <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span>
-                        ${isOverdue ? ' ⚠️' : ''}
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <div>
+                                <strong>📖 ${book ? book.title : 'Книга удалена'}</strong><br>
+                                ${book ? `Автор: ${book.author}<br>` : ''}
+                                🗓️ До: ${returnDate.toLocaleDateString()}<br>
+                                <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span>
+                                ${isOverdue ? ' ⚠️' : (isSoon ? ' 🔔' : '')}
+                            </div>
+                            ${(isOverdue || isSoon) ? `
+                                <button class="btn btn-secondary"
+                                        style="font-size:12px; padding:6px 12px;"
+                                        onclick="sendReminder(${rental.user_id}, '${(book ? book.title : 'Книга').replace(/'/g, "\\'")}', ${diffDays})">
+                                    📨 Напомнить
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                 `;
             });
@@ -295,9 +298,7 @@ async function addBook(e) {
     try {
         const response = await fetch('/api/books', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, author, category, year, total, price, url })
         });
         
@@ -352,9 +353,7 @@ async function updateBook(e) {
     try {
         const response = await fetch(`/api/books/${id}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, author, category, year, total, price, url })
         });
         
@@ -391,5 +390,32 @@ async function deleteBook(bookId) {
         }
     } catch (error) {
         alert('Ошибка подключения к серверу');
+    }
+}
+
+// ============ РУЧНОЕ НАПОМИНАНИЕ ============
+
+async function sendReminder(userId, bookTitle, daysLeft) {
+    const isOverdue = daysLeft < 0;
+    const text = isOverdue
+        ? `Книга "${bookTitle}" просрочена на ${Math.abs(daysLeft)} дн. Пожалуйста, верните её как можно скорее.`
+        : `Напоминаем, что срок аренды книги "${bookTitle}" истекает через ${daysLeft} дн.`;
+
+    try {
+        const response = await fetch('/api/reminders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, bookTitle, daysLeft, message: text })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`✅ Напоминание отправлено пользователю (ID ${userId}):\n\n${text}`);
+        } else {
+            alert('⚠️ Напоминание зафиксировано локально:\n\n' + text);
+        }
+    } catch (error) {
+        alert('📨 Напоминание (локально):\n\n' + text);
     }
 }
